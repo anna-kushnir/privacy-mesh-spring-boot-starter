@@ -1,8 +1,6 @@
 package kpi.kushnir.privacy.neo4j;
 
-import org.springframework.data.neo4j.core.schema.RelationshipId;
-import org.springframework.data.neo4j.core.schema.RelationshipProperties;
-import org.springframework.data.neo4j.core.schema.TargetNode;
+import org.springframework.data.neo4j.core.schema.*;
 
 /**
  * Graph DB Model: Relationship.
@@ -11,8 +9,9 @@ import org.springframework.data.neo4j.core.schema.TargetNode;
 @RelationshipProperties
 public class ContextPseudonymRelation {
 
-    @RelationshipId
-    private Long id;
+    @Id
+    @GeneratedValue
+    private String id;
 
     private final String contextName;
 
