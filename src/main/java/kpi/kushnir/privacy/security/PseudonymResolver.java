@@ -4,13 +4,18 @@ import kpi.kushnir.privacy.neo4j.ContextPseudonymRelation;
 import kpi.kushnir.privacy.neo4j.PseudonymNode;
 import kpi.kushnir.privacy.neo4j.UserIdentityNode;
 import kpi.kushnir.privacy.neo4j.UserIdentityRepository;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.AccessDeniedException;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Business logic for decrypting the token and accessing the pseudonymization domain (Neo4j).
@@ -37,11 +42,26 @@ public class PseudonymResolver {
         mfaEnforcer.enforceMfaPolicy(jwt, contextName);
 
         String realUserId = jwt.getSubject();
+        Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
 
         String pseudonym = repository.findPseudonymValueByContext(realUserId, contextName)
                 .orElseGet(() -> generateAndSaveNewPseudonym(realUserId, contextName));
 
-        return new PseudonymizedAuthentication(pseudonym, token, null);
+        return new PseudonymizedAuthentication(pseudonym, token, authorities);
+    }
+
+    private Collection<GrantedAuthority> extractAuthorities(Jwt jwt) {
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        if (roles == null || roles.isEmpty()) {
+            roles = jwt.getClaimAsStringList("authorities");
+        }
+        if (roles == null) {
+            return List.of();
+        }
+        return roles.stream()
+                .map(role -> role.startsWith("ROLE_") ? role: "ROLE_" + role)
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
     }
 
     private void validateDpopProof(String dpopProof, String accessToken) {

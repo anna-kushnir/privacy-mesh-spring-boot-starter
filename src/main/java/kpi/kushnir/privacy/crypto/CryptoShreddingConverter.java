@@ -4,6 +4,8 @@ import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import kpi.kushnir.privacy.security.SecurityContextHelper;
 
+import java.util.Optional;
+
 /**
  * Automatic Spring Data JPA converter.
  * It works when saving (INSERT/UPDATE) and reading (SELECT) from the database.
@@ -25,8 +27,13 @@ public class CryptoShreddingConverter implements AttributeConverter<String, Stri
             return null;
         }
 
+        Optional<String> pseudonymOpt = SecurityContextHelper.getCurrentUserPseudonym();
+        if (pseudonymOpt.isEmpty() || kmsClient == null) {
+            return attribute;
+        }
+
         try {
-            String pseudonym = SecurityContextHelper.getCurrentUserPseudonym();
+            String pseudonym = pseudonymOpt.get();
             String dek = kmsClient.getDekForPseudonym(pseudonym);
             return encryptionUtils.encrypt(attribute, dek);
         } catch (Exception e) {
@@ -40,14 +47,19 @@ public class CryptoShreddingConverter implements AttributeConverter<String, Stri
             return null;
         }
 
+        Optional<String> pseudonymOpt = SecurityContextHelper.getCurrentUserPseudonym();
+        if (pseudonymOpt.isEmpty() || kmsClient == null) {
+            return dbData;
+        }
+
         try {
-            String pseudonym = SecurityContextHelper.getCurrentUserPseudonym();
+            String pseudonym = pseudonymOpt.get();
             String dek = kmsClient.getDekForPseudonym(pseudonym);
             return encryptionUtils.decrypt(dbData, dek);
         } catch (KeyRevokedException e) {
             return "[DATA_SHREDDED]";
         } catch (Exception e) {
-            return "[ENCRYPTED_DATA_UNAVAILABLE]";
+            return dbData;
         }
     }
 }

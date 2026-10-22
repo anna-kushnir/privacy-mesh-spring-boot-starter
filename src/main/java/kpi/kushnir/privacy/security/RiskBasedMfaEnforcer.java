@@ -1,10 +1,10 @@
 package kpi.kushnir.privacy.security;
 
 import kpi.kushnir.privacy.autoconfigure.PrivacyMeshProperties;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.AccessDeniedException;
 import java.util.List;
 
 /**
